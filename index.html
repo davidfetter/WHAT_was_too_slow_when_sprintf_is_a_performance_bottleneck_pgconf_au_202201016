@@ -3,15 +3,11 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <!-- CHANGEME -->
-        <meta property="og:title" content="Title goes here" />
-        <meta property="og:description" content="Subtitle if there is one" />
-        <!-- /CHANGEME -->
+        <meta property="og:title" content="WHAT was too slow?!?" />
+        <meta property="og:description" content="when sprintf is a performance bottleneck" />
         <meta name="author" content="David Fetter" />
 
-        <!-- CHANGEME -->
-		<title>Title goes here</title>
-        <!-- /CHANGEME -->
+		<title>WHAT was too slow?!?</title>
 
 		<link rel="stylesheet" href="revealjs/dist/reset.css">
 		<link rel="stylesheet" href="revealjs/dist/reveal.css">
@@ -24,12 +20,204 @@
 		<div class="reveal">
 			<div class="slides">
 				<section>
-                    <!-- CHANGEME -->
-                    <h3>Title goes here</h3>
-                    <!-- CHANGEME -->
+                    WHAT was too slow?!?
+                    <aside class="notes">
+                        Thanks to all of you for coming!<br/>
+                        Thanks also to Aiven, my employer, for helping me be here!<br/>
                 </section>
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>Retro-computing
+                    <img src="http://www.computinghistory.org.uk/userdata/images/large/77/22/product-77722.jpg" alt="Yep, that's an Apple //e!">
+                    <aside class="notes">
+                        Or, as my 13-year-old self used to call it, computing
+                    </aside>
+                </section>
+				<section>
+                    <aside class="notes">
+                        We'll see what I mean by "concise" presently<br/>
+                        I don't recall offhand how many registers, but not many
+                    </aside>
+                    Available resources:<br/><br/>
+                    <span class="fragment">Concise Instruction Set</span><br/>
+                    <span class="fragment">Some registers</span><br/>
+                    <span class="fragment">64kB of memory</span><br/>
+                    <span class="fragment">The floppy disk</span><br/>
+                </section>
+                <section>
+                    "Concise"
+                    <aside class="notes">
+                        It turns out "concise" didn't include a MUL instruction
+                    </aside>
+                </section>
+                <section>
+                    <h1>&times;</h1>
+                    <aside class="notes">
+                        People tried the usual approaches first, iterating and
+                        adding, but this turned out to be far too slow.
+                        Eventually, they tried pre-computing, or "currying," if
+                        you want to use some slightly gate-keeping terminology.
+                    </aside>
+                </section>
+                <section>
+                    <aside class="notes">
+                        This is not a class in algebra, so please don't stare at
+                        this slide. Anyhow, the upshot is that we can
+                        pre-compute:
+                    </aside>
+                    Algebraic Identities<br/><br/>
+                    <p style="font-size:30%">
+                    (a + b)<sup>2</sup> = a<sup>2</sup> + 2ab + b<sup>2</sup><br/>
+                    (a - b)<sup>2</sup> = a<sup>2</sup> - 2ab + b<sup>2</sup><br/>
+                    ...<br/>
+                    ab = (a + b)<sup>2</sup>/4 - (a - b)<sup>2</sup>/4
+                    </p>
+                </section>
+                <section>
+                    Lookup tables<br/>
+                    (2kB worth)
+                    <aside class="notes">
+                        We are using these to avoid doing some instructions, in
+                        this case, ones not actually contained in the
+                        ISA
+                    </aside>
+                </section>
+                <section>
+                    Years pass
+                    <aside class="notes">
+                        About this time, Acca Dacca, with a new singer, becomes
+                        famous in the Northern Hemisphere.
+                    </aside>
+
+                </section>
+                <section>
+                    POSTGRES
+                    <aside class="notes">
+                        is released, then a decade or so later, gets its SQL
+                        layer, and with it, the worst name in the business.
+                    </aside>
+                </section>
+                <section>
+                    Data Volumes Grow
+                </section>
+                <section>
+                    People Get Impatient
+                </section>
+                <section>
+                    The Data Export Is SLOW!
+                    <aside class="notes">
+                        "It's slow" is one of those interesting challenges in
+                        computing. You just never know where it will lead.<br/>
+
+                        It turned out that *printing integers to stdout* was
+                        taking significant time in these exports. The code
+                        looked hauntingly familiar. It had a loop, and what
+                        turned out to be some expensive operations in it,
+                        including a division.
+                    </aside>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <textarea data-template>
+                            ```
+...
+do
+{
+    int32   remainder;
+    int32   oldvalue = value;
+
+    value /= 10;
+    remainder = oldval - value * 10;
+    *a++ = '0' + remainder;
+} while (value != 0)
+...
+                            ```
+                        </textarea>
+                    </section>
+                </section>
+                <section>
+                    This Looks Like Something We've Seen Before
+                </section>
+                <section>
+                    Lookup Table!
+                    <aside class="notes">
+                        Avoid some of those expensive divisions, have
+                        digit pairs ready to hand.
+                    </aside>
+                </section>
+                <section>
+                    Into The Future
+                </section>
+                <section>
+                    Faster?
+                </section>
+                <section>
+                    Yes.
+                </section>
+                <section>
+                    Thanks, Professor Daniel Lemire!
+                </section>
+                <section>
+                    Cache (Curry) More
+                </section>
+                <section>
+                    Decimal Digits
+                    <aside class="notes">
+                        We'd love to know how long the decimal representation
+                        will be. It turns out, this can be slimmed down.<br/>
+
+                        The binary representation of an unsigned integer has a
+                        most significant 1. This can be in 32 (or 64, but in any
+                        case a small number) of possible places. Each of those
+                        places represents a range of numbers that has at most
+                        two different numbers of decimal digits. For example, a
+                        number with its leftmost 1 at position 4 represents
+                        numbers from 8--1 decimal digit--to 15--2 decimal
+                        digits.
+                    </aside>
+                </section>
+                <section>
+                    Offset Table (One Size Bigger)
+                    <aside class="notes">
+                        We use a CLZ instruction to find where that significant
+                        1 is. We add a magick number from the table. That magick
+                        number is guaranteed to be larger than the original
+                        integer size, but it has a special property. When
+                        we look at just the bits beyond the width of the original
+                        number, we get the number of decimal digits in the
+                        original number.
+                </section>
+                <section>
+                    Fewer Instructions!<br/>
+                    <span class="fragment">1 CLZ instruction</span><br/>
+                    <span class="fragment">1 table lookup</span><br/>
+                    <span class="fragment">1 add</span><br/>
+                    <span class="fragment">1 shift</span><br/>
+                </section>
+                <section>
+                    The New Code<br/>
+                    <section data-markdown>
+                        <textarea data-template>
+                            ```
+return (v + digit_transitions[pg_leftmost_one_pos32(v)]) >> 32;
+                            ```
+                        </textarea>
+                    </section>
+                </section>
+                <section>
+                    Can we get it faster?
+                </section>
+                <section>
+                    I would love your input.
+                </section>
+                <section>
+                    Maybe this could go upstream.
+                </section>
+                <section>
+                    Questions?<br/>
+                    Comments?<br/>
+                </section>
+                <section>
+                    Thank You!!!
+                </section>
 			</div>
 		</div>
 
@@ -37,6 +225,7 @@
 		<script src="revealjs/plugin/notes/notes.js"></script>
 		<script src="revealjs/plugin/markdown/markdown.js"></script>
 		<script src="revealjs/plugin/highlight/highlight.js"></script>
+		<script src="revealjs/plugin/math/math.js"></script>
 		<script>
 			// More info about initialization & config:
 			// - https://revealjs.com/initialization/
@@ -72,10 +261,8 @@
             <div id="header-right"></div>
             <div id="footer-left">
                 David Fetter<br/>
-                <!-- CHANGEME -->
-                Event<br/>
-                Date<br/>
-                <!-- /CHANGEME -->
+                Linuxconf.AU 2022<br/>
+                2022/01/16<br/>
                 <a href="mailto:david.fetter@aiven.io">david.fetter@aiven.io</a></div>
             <div id="footer-right">
                 <a href="https://www.aiven.io"
